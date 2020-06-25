@@ -7,13 +7,13 @@
       class="map"
     >
       <l-choropleth-layer
-        :data="pyDepartmentsData"
+        :data="currentDepartmentsData"
         titleKey="department_name"
         idKey="department_id"
         :value="value"
         :extraValues="extraValues"
         geojsonIdKey="abbrev"
-        :geojson="paraguayGeojson"
+        :geojson="geodata"
         :colorScale="colorScale"
       >
         <template slot-scope="props">
@@ -36,12 +36,13 @@
     </l-map>
 
     <div class="slider">
-      <div class="current">Current Date: {{currentMonth}}</div>
-      <div class="current-data">Current data set contains {{currentDataSet.length}} entries</div>
+      <div @click="sliderValue = 200" class="current">
+        Current Date: {{ currentMonth }}
+      </div>
 
       <range-slider
         min="0"
-        max="12"
+        max="365"
         step="1"
         v-model="sliderValue"
         width="500"
@@ -52,19 +53,13 @@
 </template>
 
 <script>
-import {
-  InfoControl,
-  ReferenceChart,
-  ChoroplethLayer,
-} from "vue-choropleth";
+import { InfoControl, ReferenceChart, ChoroplethLayer } from "vue-choropleth";
 
-import { geojson } from "./data/py-departments-geojson";
-import paraguayGeojson from "./data/paraguay.json";
-import { pyDepartmentsData } from "./data/py-departments-data";
+import { geodata } from "./data/geodata.js";
+import { globalDeathRates } from "./data/global-death-rate.js"
 import { LMap } from "vue2-leaflet";
 import RangeSlider from "vue-range-slider";
-import moment from "moment"
-import { populationDataByMonth } from "./data/data.js";
+import moment from "moment";
 
 export default {
   name: "app",
@@ -73,12 +68,12 @@ export default {
     "l-info-control": InfoControl,
     "l-reference-chart": ReferenceChart,
     "l-choropleth-layer": ChoroplethLayer,
-    "range-slider": RangeSlider,
+    "range-slider": RangeSlider
   },
   data() {
     return {
-      pyDepartmentsData,
-      paraguayGeojson,
+      geodata,
+      globalDeathRates,
       colorScale: ["e7d090", "e9ae7b", "de7062"],
       value: {
         key: "amount_w",
@@ -95,20 +90,38 @@ export default {
       },
       currentStrokeColor: "3d3213",
       sliderValue: 6,
+      testData: []
     };
   },
-  computed: {
-    currentMonth: function() {
-      return moment("2019-06-01").add(this.sliderValue, "M").format("MMMM YYYY")
-    },
-    currentDataSet: function() {
-      const currentDate = moment("2019-06-01").add(this.sliderValue, "M").format("YYYY-MM")
-      const data = populationDataByMonth[currentDate] || []
-      console.log("current data")
-      console.dir(data)
-      return data
-    },
+  mounted: function () {
+    let count = 0;
+    setInterval(function () {
+      count = count + 1;
+      console.log(`count: ${count}`);
+    }, 2000);
   },
+  computed: {
+    geodata: function () {
+      return geodata;
+    },
+    currentMonth: function () {
+      return moment("2019-06-01")
+        .add(this.sliderValue, "d")
+        .format("MMMM YYYY DD");
+    },
+    currentDepartmentsData: function () {
+      const currentDate = moment("2019-06-01")
+        .add(this.sliderValue, "d")
+        .format("YYYY-MM-DD");
+      const currentDateDepartments = globalDeathRates[currentDate] || [];
+      console.dir(currentDateDepartments);
+      return currentDateDepartments;
+    }
+  },
+
+  setDate() {
+    this.sliderValue = 200;
+  }
 };
 </script>
 
@@ -147,7 +160,7 @@ body {
 
 .slider {
   width: calc(100% - 40px);
-  padding: 40px 20px 0 20px;;
+  padding: 40px 20px 0 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -159,13 +172,6 @@ body {
     font-family: sans-serif;
     font-weight: 600;
     margin-bottom: 6px;
-  }
-
-  .current-data {
-    color: #e2e2e2;
-    font-size: 16px;
-    font-family: sans-serif;
-    font-weight: 400;
   }
 
   .range-slider {
